@@ -276,18 +276,11 @@ class DownstreamSync(SyncProcess):
         self.affected_tests()
 
         action = self.next_action
-        if action == DownstreamAction.try_push:
+        if action in (DownstreamAction.try_push, DownstreamAction.try_push_stability):
             return TryPush.create(self._lock,
                                   self,
                                   affected_tests=self.try_paths(),
-                                  stability=False,
-                                  hacks=False,
-                                  try_cls=try_cls)
-        elif action == DownstreamAction.try_push_stability:
-            return TryPush.create(self._lock,
-                                  self,
-                                  affected_tests=self.try_paths(),
-                                  stability=True,
+                                  stability=(action == DownstreamAction.try_push_stability),
                                   hacks=False,
                                   try_cls=try_cls)
 
