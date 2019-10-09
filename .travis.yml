@@ -21,10 +21,10 @@ matrix:
     # Job 2: Unit Tests in Docker env
     - env: docker-wptsync-test
       # Upgrade to newer docker version
-      addons:
-        apt:
-          packages:
-            - docker-ce
+#      addons:
+#        apt:
+#          packages:
+#            - docker-ce
       sudo: required
       services:
         - docker
