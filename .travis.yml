@@ -24,11 +24,12 @@ matrix:
       addons:
         apt:
           packages:
-            - docker-ce=17.09.0-ce
+            - docker-ce
       sudo: required
       services:
         - docker
       install:
+        - docker --version
         - docker build -t wptsync_dev --file docker/Dockerfile.dev .
         - sudo chown -R 10001 .
       script:
