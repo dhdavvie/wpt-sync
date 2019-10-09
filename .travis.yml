@@ -33,7 +33,7 @@ matrix:
         - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
         - sudo apt-get update
         - sudo apt-cache madison docker-ce
-        - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce=17.12.1~ce-0~ubuntu
+        - sudo apt-get -y --alow-downgrades -o Dpkg::Options::="--force-confnew" install docker-ce=17.12.1~ce-0~ubuntu
       install:
         - docker --version
         - docker build -t wptsync_dev --file docker/Dockerfile.dev .
