@@ -19,6 +19,7 @@ from sync import repos, settings, bugcomponents, base, downstream, landing, tryp
 from sync.env import Environment, set_env, clear_env
 from sync.gh import AttrDict
 from sync.lock import SyncLock
+from sync.phab.phab import MockPhabricator
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -99,7 +100,7 @@ def env(request, mock_mach, mock_wpt):
     bugcomponents.Mach = downstream.Mach = landing.Mach = mock_mach
     downstream.WPT = mock_wpt
 
-    set_env(config, bz, gh_wpt)
+    set_env(config, bz, gh_wpt, MockPhabricator(config))
 
     for name, dir in config["paths"].iteritems():
         path = os.path.join(config["root"], dir)

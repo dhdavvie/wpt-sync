@@ -8,6 +8,7 @@ import trypush
 import update
 import upstream
 import worktree
+from phab import phab_upstream
 from env import Environment
 from errors import RetryableError
 from gitutils import pr_for_commit, update_repositories, gecko_repo
@@ -333,6 +334,53 @@ class RetriggerHandler(Handler):
 
 
 class PhabricatorHandler(Handler):
+    dispatch_event = {}
+
+    def __init__(self, *args, **kwargs):
+        self.dispatch_event = {
+            "commit": PhabricatorHandler.handle_commit,
+            "closed": PhabricatorHandler.handle_closed,
+            "abandoned": PhabricatorHandler.handle_abandoned,
+        }
+        super(PhabricatorHandler, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    def handle_commit(git_gecko, git_wpt, body):
+        update_repositories(git_gecko, None)
+
+        # At some point here need to identify the base and stack
+
+        revision = env.phab.get_revision(body['objectPHID'])
+        repo = env.phab.get_repo(revision['fields']['repositoryPHID'])
+
+        newrelic.agent.add_custom_parameters({
+            'differential_revision': revision,
+            'repo': repo,
+        })
+
+        if repo['name'] != 'mozilla-central':
+            # Not sure how reliable this is, so record to NewRelic so that we can verify
+            newrelic.agent.record_custom_event("phab_revision_not_on_central")
+            logger.info("Revision is not against central")
+            return
+
+        # TODO need to distinguish between new and updated. This is probably done in the listener
+        phab_upstream.new_phab_differential(git_gecko, git_wpt, revision)
+
+    @staticmethod
+    def handle_closed(git_gecko, git_wpt, body):
+        pass
+
+    @staticmethod
+    def handle_abandoned(git_gecko, git_wpt, body):
+        pass
+
     def __call__(self, git_gecko, git_wpt, body):
         newrelic.agent.set_transaction_name("PhabricatorHandler")
         logger.info('Got phab event, doing nothing: %s' % body)
+
+        handler = self.dispatch_event[body['type']]
+        if handler:
+            return handler(git_gecko, git_wpt, body)
+
+

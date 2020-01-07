@@ -1,6 +1,6 @@
 import time
 import re
-from phabricator import Phabricator
+from phab import Phabricator
 import newrelic.agent
 
 from .. import log
@@ -41,7 +41,7 @@ class PhabEventListener(object):
 
     event_mapping = {
         "updated the diff for D": "commit",
-        "created D": "commit",
+        "created D": "opened",
         "closed D": "closed",
         "abandoned D": "abandoned",
         "added a reverting change for D": None,  # Not sure what this is yet
@@ -53,9 +53,7 @@ class PhabEventListener(object):
         self.timer_in_seconds = config['phabricator']['listener']['interval']
         self.latest = None
 
-        self.phab = Phabricator(host='https://phabricator.services.mozilla.com/api/',
-                                token=config['phabricator']['token'])
-        self.phab.update_interfaces()
+        self.phab = Phabricator(config)
 
     def run(self):
         # Run until told to stop.
@@ -66,28 +64,10 @@ class PhabEventListener(object):
 
     @newrelic.agent.background_task(name='feed-fetching', group='Phabricator')
     def get_feed(self, before=None):
-        """ """
         if self.latest and before is None:
             before = int(self.latest['chronologicalKey'])
 
-        feed = []
-
-        def chrono_key(feed_story_tuple):
-            return int(feed_story_tuple[1]["chronologicalKey"])
-
-        # keep fetching stories from Phabricator until there are no more stories to fetch
-        while True:
-            result = self.phab.feed.query(before=before, view='text')
-            if result.response:
-                results = sorted(result.response.items(), key=chrono_key)
-                results = map(self.map_feed_tuple, results)
-                feed.extend(results)
-                if len(results) == 100 and before is not None:
-                    # There may be more events we wish to fetch
-                    before = int(results[-1]["chronologicalKey"])
-                    continue
-            break
-        return feed
+        return map(self.map_feed_tuple, self.phab.get_feed(before=before))
 
     @newrelic.agent.background_task(name='feed-parsing', group='Phabricator')
     def parse(self, feed):
