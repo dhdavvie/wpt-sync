@@ -80,13 +80,13 @@ class MockPhabricator(Phabricator):
         pass
 
     def get_revision(self, revision_id):
-        return {"fields": {"authorPHID": "PHID-USER-dzqqj4kg6v774z2yiaeh", "status": {"color.ansi": "green", "name": "Accepted", "value": "accepted", "closed": False}, "bugzilla.bug-id": "1607530", "testPlan": "", "title": "Bug 1607530 - Fixing lifetime issues in promise closures;r?nika", "isDraft": False, "summary": "", "repositoryPHID": "PHID-REPO-saax4qdxlbbhahhp2kg5", "diffPHID": "PHID-DIFF-mqq4lwiwy4ipqvaewtwt", "policy": {"edit": "PHID-PROJ-njo5uuqyyq3oijbkhy55", "view": "public"}, "dateCreated": 1578483417, "dateModified": 1578507542, "holdAsDraft": False}, "phid": "PHID-DREV-ff55ctxc7qdl3w44lqu6", "type": "DREV", "id": 59092, "attachments": {}}
+        return {"fields": {"authorPHID": "PHID-USER-dzqqj4kg6v774z2yiaeh", "status": {"color.ansi": "green", "name": "Accepted", "value": "accepted", "closed": False}, "bugzilla.bug-id": "1607530", "testPlan": "", "title": "Bug 1607530 - Fixing lifetime issues in promise closures;r?nika", "isDraft": False, "summary": "", "repositoryPHID": "PHID-REPO-saax4qdxlbbhahhp2kg5", "diffPHID": "PHID-DIFF-mqq4lwiwy4ipqvaewtwt", "policy": {"edit": "PHID-PROJ-njo5uuqyyq3oijbkhy55", "view": "public"}, "dateCreated": 1578483417, "dateModified": 1578507542, "holdAsDraft": False}, "phid": "PHID-DREV-ff55ctxc7qdl3w44lqu6", "type": "DREV", "id": 59092, "attachments": {}}  # noqa E501
 
     def get_diff(self, diff_id):
-        return {"fields": {"authorPHID": "PHID-USER-dzqqj4kg6v774z2yiaeh", "refs": [{"type": "branch", "name": "default"}, {"identifier": "bc5880b621d585ca49be49e07ee14dd32153c01b", "type": "base"}], "revisionPHID": "PHID-DREV-ff55ctxc7qdl3w44lqu6", "dateCreated": 1578502144, "repositoryPHID": "PHID-REPO-saax4qdxlbbhahhp2kg5", "policy": {"view": "public"}, "dateModified": 1578502147}, "phid": "PHID-DIFF-mqq4lwiwy4ipqvaewtwt", "type": "DIFF", "id": 215120, "attachments": {}}
+        return {"fields": {"authorPHID": "PHID-USER-dzqqj4kg6v774z2yiaeh", "refs": [{"type": "branch", "name": "default"}, {"identifier": "bc5880b621d585ca49be49e07ee14dd32153c01b", "type": "base"}], "revisionPHID": "PHID-DREV-ff55ctxc7qdl3w44lqu6", "dateCreated": 1578502144, "repositoryPHID": "PHID-REPO-saax4qdxlbbhahhp2kg5", "policy": {"view": "public"}, "dateModified": 1578502147}, "phid": "PHID-DIFF-mqq4lwiwy4ipqvaewtwt", "type": "DIFF", "id": 215120, "attachments": {}}  # noqa E501
 
     def get_repo(self, repo_id):
-        return {"monogram": "rMOZILLACENTRAL", "remoteURI": "https://hg.mozilla.org/mozilla-unified/", "phid": "PHID-REPO-saax4qdxlbbhahhp2kg5", "staging": {"prefix": "phabricator", "supported": False, "uri": None}, "name": "mozilla-central", "encoding": "UTF-8", "uri": "https://phabricator.services.mozilla.com/source/mozilla-central/", "isHosted": False, "isImporting": False, "callsign": "MOZILLACENTRAL", "vcs": "hg", "id": "1", "isActive": True, "description": ""}
+        return {"monogram": "rMOZILLACENTRAL", "remoteURI": "https://hg.mozilla.org/mozilla-unified/", "phid": "PHID-REPO-saax4qdxlbbhahhp2kg5", "staging": {"prefix": "phabricator", "supported": False, "uri": None}, "name": "mozilla-central", "encoding": "UTF-8", "uri": "https://phabricator.services.mozilla.com/source/mozilla-central/", "isHosted": False, "isImporting": False, "callsign": "MOZILLACENTRAL", "vcs": "hg", "id": "1", "isActive": True, "description": ""}  # noqa E501
 
     def get_raw_diff(self, diff_id):
         return """diff --git a/dom/ipc/ContentParent.cpp b/dom/ipc/ContentParent.cpp
@@ -105,7 +105,10 @@ class MockPhabricator(Phabricator):
 +  nsAutoString remoteType(aRemoteType);
    return launchPromise->Then(
        GetCurrentThreadSerialEventTarget(), __func__,
+
 diff --git a/testing/web-platform/tests/acid/acid3/empty.css b/testing/web-platform/tests/acid/acid3/empty.css
+new file mode 100755
+index 000000000000..d490c124219f
 --- /dev/null
 +++ b/testing/web-platform/tests/acid/acid3/empty.css
 @@ -0,0 +1,8 @@
@@ -117,7 +120,8 @@ diff --git a/testing/web-platform/tests/acid/acid3/empty.css b/testing/web-platf
 +  h1 { color: red; }
 +
 +</style><body><h1>FAIL</h1></body></html>
-"""
+
+"""  # noqa E501
 
     def get_commit_paths(self, revision_id):
         return ['dom/ipc/ContentParent.cpp', 'testing/web-platform/tests/acid/acid3/empty.css']

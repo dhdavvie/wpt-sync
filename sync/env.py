@@ -3,6 +3,7 @@ _bz = None
 _gh_wpt = None
 _phab = None
 
+
 class Environment(object):
     @property
     def config(self):

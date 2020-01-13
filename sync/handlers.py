@@ -341,14 +341,15 @@ class PhabricatorHandler(Handler):
             "commit": PhabricatorHandler.handle_commit,
             "closed": PhabricatorHandler.handle_closed,
             "abandoned": PhabricatorHandler.handle_abandoned,
+            "opened": PhabricatorHandler.handle_opened,
         }
         super(PhabricatorHandler, self).__init__(*args, **kwargs)
 
     @staticmethod
-    def handle_commit(git_gecko, git_wpt, body):
+    def handle_opened(git_gecko, git_wpt, body):
         update_repositories(git_gecko, None)
 
-        # At some point here need to identify the base and stack
+        # TODO At some point here need to identify the base and stack
 
         revision = env.phab.get_revision(body['objectPHID'])
         repo = env.phab.get_repo(revision['fields']['repositoryPHID'])
@@ -364,11 +365,14 @@ class PhabricatorHandler(Handler):
             logger.info("Revision is not against central")
             return
 
-        # TODO need to distinguish between new and updated. This is probably done in the listener
         phab_upstream.new_phab_differential(git_gecko, git_wpt, revision)
 
     @staticmethod
     def handle_closed(git_gecko, git_wpt, body):
+        pass
+
+    @staticmethod
+    def handle_commit(git_gecko, git_wpt, body):
         pass
 
     @staticmethod
@@ -377,10 +381,7 @@ class PhabricatorHandler(Handler):
 
     def __call__(self, git_gecko, git_wpt, body):
         newrelic.agent.set_transaction_name("PhabricatorHandler")
-        logger.info('Got phab event, doing nothing: %s' % body)
 
         handler = self.dispatch_event[body['type']]
         if handler:
             return handler(git_gecko, git_wpt, body)
-
-

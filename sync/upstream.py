@@ -62,6 +62,94 @@ class UpstreamSync(SyncProcess):
                           ("wpt-merged", "complete")]
     multiple_syncs = True
 
+    @property
+    def remote_branch(self):
+        return self.data.get("remote-branch")
+
+    @remote_branch.setter
+    @mut()
+    def remote_branch(self, value):
+        if value:
+            assert not value.startswith("refs/")
+        self.data["remote-branch"] = value
+
+    @property
+    def pr_status(self):
+        return self.data.get("pr-status", "open")
+
+    @pr_status.setter
+    def pr_status(self, value):
+        self.data["pr-status"] = value
+
+    @mut()
+    def create_pr(self):
+        if self.pr:
+            return self.pr
+
+        assert self.remote_branch is not None
+        assert self.remote_branch in self.git_wpt.remotes.origin.refs
+        while not env.gh_wpt.get_branch(self.remote_branch):
+            logger.debug("Waiting for branch")
+            time.sleep(1)
+
+        commit_summary = self.wpt_commits[0].commit.summary
+
+        body = self.wpt_commits[0].msg.split("\n", 1)
+        body = body[1] if len(body) != 1 else ""
+
+        pr_id = env.gh_wpt.create_pull(
+            title="[Gecko%s] %s" % (" Bug %s" % self.bug if self.bug else "", commit_summary),
+            body=body.strip(),
+            base="master",
+            head=self.remote_branch)
+        self.pr = pr_id
+        # TODO: add label to bug
+        env.bz.comment(self.bug,
+                       "Created web-platform-tests PR %s for changes under "
+                       "testing/web-platform/tests" %
+                       env.gh_wpt.pr_url(pr_id))
+        return pr_id
+
+    @mut()
+    def push_commits(self):
+        remote_branch = self.get_or_create_remote_branch()
+        logger.info("Pushing commits from bug %s to branch %s" % (self.bug, remote_branch))
+        push_info = self.git_wpt.remotes.origin.push("refs/heads/%s:%s" %
+                                                     (self.branch_name, remote_branch),
+                                                     force=True,
+                                                     set_upstream=True)
+        for item in push_info:
+            if item.flags & item.ERROR:
+                raise AbortError(item.summary)
+
+    def push_required(self):
+        return not (self.remote_branch and
+                    self.remote_branch in self.git_wpt.remotes.origin.refs and
+                    self.git_wpt.remotes.origin.refs[self.remote_branch].commit.hexsha ==
+                    self.wpt_commits.head.sha1)
+
+    @mut()
+    def get_or_create_remote_branch(self):
+        if not self.remote_branch:
+            pygit2_gecko = pygit2_get(self.git_gecko)
+            pygit2_wpt = pygit2_get(self.git_wpt)
+            if self.branch_name in pygit2_gecko.branches:
+                upstream = pygit2_gecko.branches[self.branch_name].upstream
+                if upstream:
+                    self.remote_branch = upstream.shortname
+
+        if not self.remote_branch:
+            count = 0
+            refs = pygit2_wpt.references
+            initial_path = path = "refs/remotes/origin/gecko/%s" % self.bug
+            while path in refs:
+                count += 1
+                path = "%s-%s" % (initial_path, count)
+            self.remote_branch = path[len("refs/remotes/origin/"):]
+        return self.remote_branch
+
+
+class GeckoUpstreamSync(UpstreamSync):
     def __init__(self, git_gecko, git_wpt, process_name):
         super(UpstreamSync, self).__init__(git_gecko, git_wpt, process_name)
 
@@ -149,51 +237,12 @@ class UpstreamSync(SyncProcess):
         return self.process_name.obj_id
 
     @property
-    def pr_status(self):
-        return self.data.get("pr-status", "open")
-
-    @pr_status.setter
-    def pr_status(self, value):
-        self.data["pr-status"] = value
-
-    @property
     def merge_sha(self):
         return self.data.get("merge-sha", None)
 
     @merge_sha.setter
     def merge_sha(self, value):
         self.data["merge-sha"] = value
-
-    @property
-    def remote_branch(self):
-        return self.data.get("remote-branch")
-
-    @remote_branch.setter
-    @mut()
-    def remote_branch(self, value):
-        if value:
-            assert not value.startswith("refs/")
-        self.data["remote-branch"] = value
-
-    @mut()
-    def get_or_create_remote_branch(self):
-        if not self.remote_branch:
-            pygit2_gecko = pygit2_get(self.git_gecko)
-            pygit2_wpt = pygit2_get(self.git_wpt)
-            if self.branch_name in pygit2_gecko.branches:
-                upstream = pygit2_gecko.branches[self.branch_name].upstream
-                if upstream:
-                    self.remote_branch = upstream.shortname
-
-        if not self.remote_branch:
-            count = 0
-            refs = pygit2_wpt.references
-            initial_path = path = "refs/remotes/origin/gecko/%s" % self.bug
-            while path in refs:
-                count += 1
-                path = "%s-%s" % (initial_path, count)
-            self.remote_branch = path[len("refs/remotes/origin/"):]
-        return self.remote_branch
 
     @property
     def upstreamed_gecko_commits(self):
@@ -286,53 +335,6 @@ class UpstreamSync(SyncProcess):
             self.wpt_commits.head = wpt_commit
 
         return wpt_commit, True
-
-    @mut()
-    def create_pr(self):
-        if self.pr:
-            return self.pr
-
-        assert self.remote_branch is not None
-        assert self.remote_branch in self.git_wpt.remotes.origin.refs
-        while not env.gh_wpt.get_branch(self.remote_branch):
-            logger.debug("Waiting for branch")
-            time.sleep(1)
-
-        commit_summary = self.wpt_commits[0].commit.summary
-
-        body = self.wpt_commits[0].msg.split("\n", 1)
-        body = body[1] if len(body) != 1 else ""
-
-        pr_id = env.gh_wpt.create_pull(
-            title="[Gecko%s] %s" % (" Bug %s" % self.bug if self.bug else "", commit_summary),
-            body=body.strip(),
-            base="master",
-            head=self.remote_branch)
-        self.pr = pr_id
-        # TODO: add label to bug
-        env.bz.comment(self.bug,
-                       "Created web-platform-tests PR %s for changes under "
-                       "testing/web-platform/tests" %
-                       env.gh_wpt.pr_url(pr_id))
-        return pr_id
-
-    @mut()
-    def push_commits(self):
-        remote_branch = self.get_or_create_remote_branch()
-        logger.info("Pushing commits from bug %s to branch %s" % (self.bug, remote_branch))
-        push_info = self.git_wpt.remotes.origin.push("refs/heads/%s:%s" %
-                                                     (self.branch_name, remote_branch),
-                                                     force=True,
-                                                     set_upstream=True)
-        for item in push_info:
-            if item.flags & item.ERROR:
-                raise AbortError(item.summary)
-
-    def push_required(self):
-        return not (self.remote_branch and
-                    self.remote_branch in self.git_wpt.remotes.origin.refs and
-                    self.git_wpt.remotes.origin.refs[self.remote_branch].commit.hexsha ==
-                    self.wpt_commits.head.sha1)
 
     @mut()
     def update_github(self):
